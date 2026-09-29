@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول المهام اليومي - التفاعلي الكامل</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Top Navigation & Header -->
+        <header class="app-header">
+            <div class="header-right">
+                <h1 class="app-title"><i class="fa-solid fa-calendar-check"></i> جدول المهام اليومي</h1>
+                <p class="app-subtitle">تنظيم المحاضرات، المذاكرة، والمهام اليومية والأسبوعية</p>
+            </div>
+            <div class="header-left">
+                <button class="btn-top-action" id="btn-toggle-calendar"><i class="fa-solid fa-calendar-days"></i> التقويم الشامل</button>
+            </div>
+        </header>
+
+        <!-- Calendar Modal Overlay (Full Calendar View) -->
+        <div class="modal-overlay hidden" id="calendar-modal">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-calendar"></i> تقويم الشهر الكامل</h3>
+                    <button class="btn-close-modal" id="btn-close-calendar">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="calendar-controls">
+                        <button id="cal-prev-month" class="btn-icon"><i class="fa-solid fa-chevron-right"></i></button>
+                        <h4 id="cal-month-year-title">سبتمبر 2026</h4>
+                        <button id="cal-next-month" class="btn-icon"><i class="fa-solid fa-chevron-left"></i></button>
+                    </div>
+                    <div class="calendar-grid-header">
+                        <span>السبت</span><span>الأحد</span><span>الإثنين</span><span>الثلاثاء</span><span>الأربعاء</span><span>الخميس</span><span>الجمعة</span>
+                    </div>
+                    <div class="calendar-grid-days" id="calendar-days-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Key Modal -->
+        <div class="modal-overlay hidden" id="api-modal">
+            <div class="modal-card small">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-key"></i> إعداد مفتاح Gemini API</h3>
+                    <button class="btn-close-modal" id="btn-close-api">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-sm">أدخل مفتاح الـ API الخاص بك لتفعيل الذكاء الاصطناعي الحقيقي للتعامل مع جدولك:</p>
+                    <input type="password" id="gemini-api-key-input" class="form-control mt-10" placeholder="AIzaSy...">
+                    <button class="btn-primary mt-15 w-100" id="btn-save-api-key">حفظ المفتاح</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Week Navigation Controller -->
+        <section class="week-navigation-card">
+            <div class="week-nav-header">
+                <button class="btn-nav" id="btn-prev-week"><i class="fa-solid fa-chevron-right"></i> الأسبوع السابق</button>
+                <div class="nav-center-info">
+                    <button class="btn-badge-today" id="btn-go-today"><i class="fa-solid fa-location-crosshairs"></i> اليوم الحالي</button>
+                    <div class="current-date-label" id="current-selected-date-text">الثلاثاء، 29 سبتمبر 2026</div>
+                </div>
+                <button class="btn-nav" id="btn-next-week">الأسبوع التالي <i class="fa-solid fa-chevron-left"></i></button>
+            </div>
+
+            <!-- Days Strip -->
+            <div class="days-strip" id="days-strip-container">
+                <!-- Dynamically Generated Days -->
+            </div>
+        </section>
+
+        <!-- Daily Progress Section -->
+        <section class="progress-card">
+            <div class="progress-info">
+                <span><i class="fa-solid fa-chart-line"></i> نسبة الإنجاز اليومي</span>
+                <span class="progress-percentage-text" id="progress-percentage-display">(0/0) 0%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progress-bar-fill-elem" style="width: 0%;"></div>
+            </div>
+        </section>
+
+        <!-- Search & Quick Filters -->
+        <section class="search-section">
+            <div class="search-input-wrapper">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="search-tasks-input" placeholder="بحث في محاضرات ومهام هذا اليوم...">
+            </div>
+        </section>
+
+        <!-- Add Task Form Container -->
+        <section class="add-task-card">
+            <form id="add-task-form">
+                <div class="form-row gap-12">
+                    <div class="form-group flex-2">
+                        <input type="text" id="input-task-title" class="form-control" placeholder="اكتب المهمة أو المحاضرة..." required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <select id="select-task-type" class="form-control">
+                            <option value="محاضرة / كلية">📚 محاضرة / كلية</option>
+                            <option value="مهمة / مذاكرة">📝 مهمة / مذاكرة</option>
+                            <option value="مشروع / كود">💻 مشروع / كود</option>
+                            <option value="شخصي">👤 شخصي</option>
+                        </select>
+                    </div>
+                    <div class="form-group flex-1">
+                        <select id="select-task-priority" class="form-control">
+                            <option value="متوسطة">⚡ أولوية متوسطة</option>
+                            <option value="عالية">🔥 أولوية عالية</option>
+                            <option value="منخفضة">🌱 أولوية منخفضة</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row gap-12 mt-12">
+                    <div class="form-group flex-2">
+                        <input type="text" id="input-task-notes" class="form-control" placeholder="المكان / ملاحظات (اختياري)">
+                    </div>
+                    <div class="form-group flex-1">
+                        <select id="select-task-repeat" class="form-control">
+                            <option value="مرة واحدة">1️⃣ مرة واحدة فقط</option>
+                            <option value="تكرار أسبوعي">🔄 تكرار أسبوعي دائم</option>
+                        </select>
+                    </div>
+                    <div class="form-group flex-1 flex-row gap-6">
+                        <input type="time" id="input-time-start" class="form-control" value="09:00">
+                        <input type="time" id="input-time-end" class="form-control" value="10:00">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary btn-add-submit mt-15">
+                    <i class="fa-solid fa-plus"></i> إضافة المهمة للجدول
+                </button>
+            </form>
+        </section>
+
+        <!-- Task Filters and Actions Row -->
+        <section class="filters-actions-bar">
+            <div class="filter-buttons-group">
+                <button class="btn-filter active" data-filter="all">الكل</button>
+                <button class="btn-filter" data-filter="pending">المتبقية ⌛</button>
+                <button class="btn-filter" data-filter="completed">المكتملة ✓</button>
+            </div>
+            <button class="btn-danger-text" id="btn-clear-completed"><i class="fa-solid fa-trash-can"></i> مسح المكتمل</button>
+        </section>
+
+        <!-- Main Task List Render Target -->
+        <main class="tasks-list-container" id="tasks-list-target">
+            <!-- Dynamic Task Cards Rendered Here -->
+        </main>
+
+        <!-- Bottom Backup & Settings Actions -->
+        <footer class="app-footer">
+            <button class="btn-secondary" id="btn-export-backup"><i class="fa-solid fa-download"></i> تصدير نسخة احتياطية</button>
+            <button class="btn-secondary" id="btn-import-backup-trigger"><i class="fa-solid fa-upload"></i> استرجاع البيانات</button>
+            <input type="file" id="file-import-input" accept=".json" class="hidden">
+            <button class="btn-secondary" id="btn-open-api-modal"><i class="fa-solid fa-key"></i> ضبط مفتاح Gemini API</button>
+        </footer>
+    </div>
+
+    <!-- AI Agent Floating Widget Button & Window -->
+    <div class="ai-agent-wrapper">
+        <button class="ai-fab-btn" id="btn-toggle-ai-widget">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> المساعد الذكي
+        </button>
+
+        <div class="ai-chat-window hidden" id="ai-chat-window">
+            <div class="ai-chat-header">
+                <div class="ai-brand">
+                    <i class="fa-solid fa-robot"></i>
+                    <span>المساعد الذكي (AI Agent)</span>
+                </div>
+                <button class="btn-close-chat" id="btn-close-ai-widget">&times;</button>
+            </div>
+            
+            <div class="ai-chat-body" id="ai-chat-messages-container">
+                <div class="chat-bubble bot">
+                    أهلاً بك يا بلال! 👋 أنا مساعدك الذكي المتصل بالنظام مباشرةً.<br><br>
+                    يمكنك كتابة أي أمر مثل:<br>
+                    • <i>"ضيف محاضرة Data Structure يوم السبت من 10 لـ 12"</i><br>
+                    • <i>"احذف كافة المهام المكتملة"</i><br>
+                    • <i>"علم على محاضرة الرياضيات بأنها اكتملت"</i>
+                </div>
+            </div>
+
+            <div class="ai-chat-footer">
+                <input type="text" id="ai-chat-input" placeholder="اكتب أمرك هنا للذكاء الاصطناعي...">
+                <button id="btn-send-ai-message"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
