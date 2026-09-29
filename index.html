@@ -3,8 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>جدولي اليومي والمهام</title>
+    <title>جدول المهام والمحاضرات اليومي</title>
+    <!-- خط القاهرة -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- مكتبة Tesseract لقراءة الصور (OCR) ومكتبة PDF.js -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
     <style>
         :root {
             --bg-color: #0f172a;
@@ -15,6 +20,7 @@
             --text-muted: #94a3b8;
             --border-color: #334155;
             --danger-color: #ef4444;
+            --success-color: #22c55e;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
@@ -31,7 +37,7 @@
 
         .container {
             width: 100%;
-            max-width: 600px;
+            max-width: 680px;
             background: var(--card-bg);
             border-radius: 16px;
             padding: 20px;
@@ -44,22 +50,54 @@
         header h1 { font-size: 1.6rem; margin-bottom: 5px; }
         header p { color: var(--text-muted); font-size: 0.9rem; }
 
+        /* شريط التقويم والتاريخ */
+        .calendar-bar {
+            background: #0f172a;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .date-picker-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="date"], input[type="time"] {
+            background: #1e293b;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* نموذج إضافة مهمة */
         .add-task-form {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 20px;
             background: #0f172a50;
-            padding: 12px;
+            padding: 15px;
             border-radius: 12px;
             border: 1px solid var(--border-color);
         }
 
-        .input-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .form-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
         input[type="text"] {
             flex: 1;
-            min-width: 180px;
+            min-width: 200px;
             padding: 10px 12px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
@@ -79,6 +117,8 @@
             outline: none;
         }
 
+        .time-label { font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+
         .btn-add {
             padding: 10px;
             background-color: var(--accent-color);
@@ -89,8 +129,21 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-
         .btn-add:hover { background-color: var(--accent-hover); }
+
+        /* رفع الملفات والجدول */
+        .file-upload-box {
+            background: #1e293b;
+            border: 2px dashed var(--border-color);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .file-upload-box:hover { border-color: var(--accent-color); }
+        .file-upload-box input { display: none; }
 
         .controls {
             display: flex;
@@ -120,8 +173,6 @@
             border-color: var(--accent-color);
         }
 
-        .task-stats { font-size: 0.8rem; color: var(--text-muted); }
-
         .task-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
 
         .task-item {
@@ -129,8 +180,8 @@
             align-items: center;
             justify-content: space-between;
             background: #0f172a80;
-            padding: 10px 12px;
-            border-radius: 8px;
+            padding: 12px;
+            border-radius: 10px;
             border: 1px solid var(--border-color);
         }
 
@@ -139,7 +190,9 @@
 
         .task-content { display: flex; align-items: center; gap: 10px; flex: 1; }
         .checkbox { width: 18px; height: 18px; accent-color: var(--accent-color); cursor: pointer; }
-        .task-text { font-size: 0.9rem; word-break: break-word; }
+        .task-info { display: flex; flex-direction: column; gap: 2px; }
+        .task-text { font-size: 0.95rem; font-weight: 600; }
+        .task-time-range { font-size: 0.75rem; color: var(--text-muted); }
 
         .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; }
         .badge-lectures { background: #3b82f620; color: #60a5fa; border: 1px solid #3b82f640; }
@@ -151,65 +204,134 @@
         .btn-delete:hover { color: var(--danger-color); }
 
         .empty-state { text-align: center; padding: 25px; color: var(--text-muted); font-size: 0.9rem; }
+        
+        /* Modal لقراءة النص */
+        .loading-spinner {
+            display: none;
+            color: var(--accent-color);
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
         <header>
-            <h1>📌 جدول المهام اليومي</h1>
-            <p>متابعة وتنظيم المهام والمذاكرة</p>
+            <h1>📅 جدول المحاضرات والمهام</h1>
+            <p>متابعة يومية، تقويم، وتحويل الصور إلى جدول مهام</p>
         </header>
 
+        <!-- شريط التقويم وتحديد اليوم -->
+        <div class="calendar-bar">
+            <div class="date-picker-group">
+                <label for="currentViewDate" style="font-size: 0.85rem;">عرض مهام يوم:</label>
+                <input type="date" id="currentViewDate" onchange="renderTasks()">
+            </div>
+            <button class="filter-btn active" onclick="setToday()">اليوم</button>
+        </div>
+
+        <!-- رفع ملف أو صورة جدول -->
+        <div class="file-upload-box" onclick="document.getElementById('fileInput').click()">
+            <p>📷 <strong>اضغط هنا لرفع صورة جدول أو ملف PDF</strong></p>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">سيتم قراءة المحاضرات واستخراجها تلقائياً</p>
+            <input type="file" id="fileInput" accept="image/*,.pdf" onchange="processScheduleFile(event)">
+            <div id="loadingStatus" class="loading-spinner">⏳ جاري قراءة المستند واستخراج المحاضرات...</div>
+        </div>
+
+        <!-- نموذج إضافة مهمة -->
         <div class="add-task-form">
-            <div class="input-group">
-                <input type="text" id="taskInput" placeholder="اكتب المهمة هنا..." />
+            <div class="form-row">
+                <input type="text" id="taskInput" placeholder="عنوان المهمة / المحاضرة..." />
                 <select id="categorySelect">
-                    <option value="lectures">🏛️ محاضرات</option>
+                    <option value="lectures">🏛️ محاضرة</option>
                     <option value="study">💻 مذاكرة</option>
                     <option value="german">🇩🇪 ألماني</option>
                     <option value="general">📝 عام</option>
                 </select>
             </div>
-            <button class="btn-add" onclick="addTask()">➕ إضافة المهمة</button>
+            
+            <div class="form-row">
+                <div class="time-label">
+                    <span>من:</span>
+                    <input type="date" id="startDateInput" />
+                </div>
+                <div class="time-label">
+                    <span>إلى:</span>
+                    <input type="date" id="endDateInput" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="time-label">
+                    <span>وقت البداية:</span>
+                    <input type="time" id="startTimeInput" value="09:00" />
+                </div>
+                <div class="time-label">
+                    <span>وقت النهاية:</span>
+                    <input type="time" id="endTimeInput" value="11:00" />
+                </div>
+            </div>
+
+            <button class="btn-add" onclick="addTask()">➕ إضافة لجدول الأيام المحددة</button>
         </div>
 
+        <!-- التصفية -->
         <div class="controls">
             <div class="filters">
                 <button class="filter-btn active" onclick="filterTasks('all', this)">الكل</button>
                 <button class="filter-btn" onclick="filterTasks('pending', this)">المتبقية</button>
                 <button class="filter-btn" onclick="filterTasks('completed', this)">المكتملة</button>
             </div>
-            <div class="task-stats" id="taskStats">0 متبقية</div>
+            <div class="task-stats" id="taskStats">0 مهام</div>
         </div>
 
+        <!-- القائمة -->
         <ul class="task-list" id="taskList"></ul>
     </div>
 
     <script>
-        let tasks = JSON.parse(localStorage.getItem('my_personal_tasks')) || [];
+        // إعداد التاريخ الافتراضي
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('currentViewDate').value = todayStr;
+        document.getElementById('startDateInput').value = todayStr;
+        document.getElementById('endDateInput').value = todayStr;
+
+        let tasks = JSON.parse(localStorage.getItem('my_calendar_tasks')) || [];
         let currentFilter = 'all';
 
-        function saveTasks() {
-            localStorage.setItem('my_personal_tasks', JSON.stringify(tasks));
+        function setToday() {
+            document.getElementById('currentViewDate').value = todayStr;
             renderTasks();
         }
 
-        function addTask() {
-            const input = document.getElementById('taskInput');
-            const categorySelect = document.getElementById('categorySelect');
-            const text = input.value.trim();
+        function saveTasks() {
+            localStorage.setItem('my_calendar_tasks', JSON.stringify(tasks));
+            renderTasks();
+        }
 
-            if (text === '') return;
+        function addTask(customData = null) {
+            let taskObj;
+            if (customData) {
+                taskObj = customData;
+            } else {
+                const text = document.getElementById('taskInput').value.trim();
+                if (!text) return;
 
-            tasks.push({
-                id: Date.now(),
-                text: text,
-                category: categorySelect.value,
-                completed: false
-            });
+                taskObj = {
+                    id: Date.now(),
+                    text: text,
+                    category: document.getElementById('categorySelect').value,
+                    startDate: document.getElementById('startDateInput').value,
+                    endDate: document.getElementById('endDateInput').value,
+                    startTime: document.getElementById('startTimeInput').value,
+                    endTime: document.getElementById('endTimeInput').value,
+                    completedDates: []
+                };
+            }
 
-            input.value = '';
+            tasks.push(taskObj);
+            document.getElementById('taskInput').value = '';
             saveTasks();
         }
 
@@ -218,8 +340,19 @@
             saveTasks();
         }
 
-        function toggleTask(id) {
-            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+        function toggleTask(id, dateStr) {
+            tasks = tasks.map(t => {
+                if (t.id === id) {
+                    let completed = t.completedDates || [];
+                    if (completed.includes(dateStr)) {
+                        completed = completed.filter(d => d !== dateStr);
+                    } else {
+                        completed.push(dateStr);
+                    }
+                    return { ...t, completedDates: completed };
+                }
+                return t;
+            });
             saveTasks();
         }
 
@@ -240,25 +373,37 @@
         }
 
         function renderTasks() {
+            const selectedDate = document.getElementById('currentViewDate').value;
             const taskList = document.getElementById('taskList');
             taskList.innerHTML = '';
 
-            let filtered = tasks.filter(t => {
-                if (currentFilter === 'pending') return !t.completed;
-                if (currentFilter === 'completed') return t.completed;
+            // تصفية المهام التي تشمل التاريخ المحدد (بين بداية ونهاية المهمة)
+            let dayTasks = tasks.filter(t => {
+                return selectedDate >= t.startDate && selectedDate <= t.endDate;
+            });
+
+            // تطبيق فلتر (الكل / متبقي / مكتمل)
+            let filtered = dayTasks.filter(t => {
+                const isCompleted = (t.completedDates || []).includes(selectedDate);
+                if (currentFilter === 'pending') return !isCompleted;
+                if (currentFilter === 'completed') return isCompleted;
                 return true;
             });
 
             if (filtered.length === 0) {
-                taskList.innerHTML = '<div class="empty-state">🎉 لا توجد مهام حالياً</div>';
+                taskList.innerHTML = `<div class="empty-state">🎉 لا توجد مهام مسجلة ليوم ${selectedDate}</div>`;
             } else {
                 filtered.forEach(task => {
+                    const isCompleted = (task.completedDates || []).includes(selectedDate);
                     const li = document.createElement('li');
-                    li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                    li.className = `task-item ${isCompleted ? 'completed' : ''}`;
                     li.innerHTML = `
                         <div class="task-content">
-                            <input type="checkbox" class="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})">
-                            <span class="task-text">${task.text}</span>
+                            <input type="checkbox" class="checkbox" ${isCompleted ? 'checked' : ''} onchange="toggleTask(${task.id}, '${selectedDate}')">
+                            <div class="task-info">
+                                <span class="task-text">${task.text}</span>
+                                <span class="task-time-range">⏰ ${task.startTime} - ${task.endTime}</span>
+                            </div>
                             ${getCategoryBadge(task.category)}
                         </div>
                         <button class="btn-delete" onclick="deleteTask(${task.id})" title="حذف">🗑️</button>
@@ -267,13 +412,66 @@
                 });
             }
 
-            const pending = tasks.filter(t => !t.completed).length;
-            document.getElementById('taskStats').innerText = `${pending} متبقية`;
+            const pending = dayTasks.filter(t => !(t.completedDates || []).includes(selectedDate)).length;
+            document.getElementById('taskStats').innerText = `${pending} مهام متبقية لهذا اليوم`;
         }
 
-        document.getElementById('taskInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') addTask();
-        });
+        // معالجة قراءة الصور وملفات الـ PDF للجدول
+        async function processScheduleFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const status = document.getElementById('loadingStatus');
+            status.style.display = 'block';
+
+            try {
+                let extractedText = '';
+                if (file.type.startsWith('image/')) {
+                    // استخدام Tesseract لقراءة الصورة
+                    const result = await Tesseract.recognize(file, 'ara+eng');
+                    extractedText = result.data.text;
+                } else if (file.type === 'application/pdf') {
+                    // قراءة PDF
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        extractedText += textContent.items.map(item => item.str).join(' ') + '\n';
+                    }
+                }
+
+                status.style.display = 'none';
+
+                // تحليل الأسطر وتحويلها إلى مهام
+                const lines = extractedText.split('\n').filter(l => l.trim().length > 2);
+                if (lines.length > 0) {
+                    let addedCount = 0;
+                    lines.forEach((line, idx) => {
+                        if (idx < 8) { // إضافة أول 8 أسطر واضحة كمهام محاضرات
+                            addTask({
+                                id: Date.now() + idx,
+                                text: line.trim(),
+                                category: 'lectures',
+                                startDate: document.getElementById('currentViewDate').value,
+                                endDate: document.getElementById('currentViewDate').value,
+                                startTime: `${08 + (idx % 4)}:00`,
+                                endTime: `${10 + (idx % 4)}:00`,
+                                completedDates: []
+                            });
+                            addedCount++;
+                        }
+                    });
+                    alert(`تم استخراج ${addedCount} محاضرة/مهمة من المستند بنجاح!`);
+                } else {
+                    alert('لم يتم العثور على نص واضح في الملف، يرجى كتابتها يدوياً.');
+                }
+            } catch (err) {
+                console.error(err);
+                status.style.display = 'none';
+                alert('حدث خطأ أثناء قراءة الملف، تأكد من وضوح الصورة.');
+            }
+        }
 
         renderTasks();
     </script>
