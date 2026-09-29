@@ -145,15 +145,15 @@
 
         .form-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
-        input[type="text"] {
+        input[type="text"], input[type="date"] {
             flex: 1;
-            min-width: 180px;
+            min-width: 150px;
             padding: 10px 12px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
             background: #0f172a;
             color: var(--text-main);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             outline: none;
         }
 
@@ -166,6 +166,20 @@
             font-size: 0.85rem;
             outline: none;
         }
+
+        .date-range-box {
+            display: none;
+            gap: 8px;
+            width: 100%;
+            background: #1e293b;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px dashed var(--border-color);
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .date-range-box.active { display: flex; flex-wrap: wrap; }
 
         .btn-add {
             padding: 10px;
@@ -190,7 +204,7 @@
             flex-wrap: wrap;
         }
 
-        .filters { display: flex; gap: 5px; }
+        .filters { display: flex; gap: 5px; flex-wrap: wrap; }
 
         .filter-btn {
             background: transparent;
@@ -228,23 +242,43 @@
             padding: 12px;
             border-radius: 10px;
             border: 1px solid var(--border-color);
+            gap: 10px;
         }
 
-        .task-item.completed { opacity: 0.5; }
-        .task-item.completed .task-text { text-decoration: line-through; }
+        .task-item.status-completed { border-right: 4px solid var(--success-color); opacity: 0.75; }
+        .task-item.status-completed .task-text { text-decoration: line-through; }
+
+        .task-item.status-failed { border-right: 4px solid var(--danger-color); background: #ef444410; }
+        .task-item.status-failed .task-text { color: #fca5a5; }
 
         .task-content { display: flex; align-items: center; gap: 10px; flex: 1; }
-        .checkbox { width: 18px; height: 18px; accent-color: var(--accent-color); cursor: pointer; }
+        
+        .status-actions { display: flex; gap: 4px; }
+        .btn-status {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .btn-status.check:hover, .btn-status.check.active { background: #22c55e20; border-color: var(--success-color); color: var(--success-color); }
+        .btn-status.fail:hover, .btn-status.fail.active { background: #ef444420; border-color: var(--danger-color); color: var(--danger-color); }
+
         .task-info { display: flex; flex-direction: column; gap: 2px; }
         .task-text { font-size: 0.95rem; font-weight: 600; }
         .task-details { font-size: 0.75rem; color: var(--text-muted); }
 
-        .badge-group { display: flex; gap: 4px; align-items: center; }
+        .badge-group { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
         .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; }
         .badge-lectures { background: #3b82f620; color: #60a5fa; border: 1px solid #3b82f640; }
         .badge-study { background: #8b5cf620; color: #c084fc; border: 1px solid #8b5cf640; }
         .badge-language { background: #f59e0b20; color: #fbbf24; border: 1px solid #f59e0b40; }
         .badge-general { background: #64748b20; color: #cbd5e1; border: 1px solid #64748b40; }
+
+        .badge-failed { background: #ef444420; color: #f87171; border: 1px solid #ef444440; }
+        .badge-period { background: #06b6d420; color: #22d3ee; border: 1px solid #06b6d440; }
 
         .prio-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; font-weight: bold; }
         .prio-high { background: #ef444420; color: var(--prio-high); border: 1px solid #ef444440; }
@@ -380,7 +414,7 @@
             <button class="btn-calendar" onclick="openCalendar()">📅 التقويم</button>
         </header>
 
-        <!-- شريط التقدم اليومي -->
+        <!-- شريط تقدم الإنجاز -->
         <div class="progress-box">
             <div class="progress-header">
                 <span>نسبة الإنجاز اليومي</span>
@@ -407,9 +441,9 @@
             <div class="form-row">
                 <input type="text" id="taskInput" placeholder="اكتب المهمة أو المحاضرة..." />
                 <select id="categorySelect">
-                    <option value="lectures">🏛️ محاضرة</option>
+                    <option value="lectures">🏛️ محاضرة / كلية</option>
                     <option value="study">💻 مذاكرة</option>
-                    <option value="language">🌐 لغات</option>
+                    <option value="language">🌐 لغة (ألماني)</option>
                     <option value="general">📝 عام</option>
                 </select>
                 <select id="prioritySelect">
@@ -420,10 +454,25 @@
             </div>
             
             <div class="form-row">
+                <select id="recurrenceType" onchange="toggleDateRange(this.value)">
+                    <option value="permanent">🔄 مهمة دائمة (كل أسبوع)</option>
+                    <option value="period">📅 فترة محددة (مثل الترم الدراسية)</option>
+                </select>
                 <input type="time" id="startTimeInput" value="09:00" />
                 <input type="time" id="endTimeInput" value="10:00" />
+            </div>
+
+            <!-- نطاق التاريخ للمهام المحددة بفترة -->
+            <div class="date-range-box" id="dateRangeBox">
+                <span>تاريخ البدء:</span>
+                <input type="date" id="startDateInput">
+                <span>تاريخ النهاية:</span>
+                <input type="date" id="endDateInput">
+            </div>
+
+            <div class="form-row">
                 <input type="text" id="roomInput" placeholder="المكان / ملاحظات (اختياري)" style="flex: 1;" />
-                <button class="btn-add" onclick="addTask()">➕ إضافة اليوم</button>
+                <button class="btn-add" onclick="addTask()">➕ إضافة المهمة</button>
             </div>
         </div>
 
@@ -431,8 +480,9 @@
         <div class="controls">
             <div class="filters">
                 <button class="filter-btn active" onclick="filterTasks('all', this)">الكل</button>
-                <button class="filter-btn" onclick="filterTasks('pending', this)">المتبقية</button>
-                <button class="filter-btn" onclick="filterTasks('completed', this)">المكتملة</button>
+                <button class="filter-btn" onclick="filterTasks('pending', this)">المتبقية ⏳</button>
+                <button class="filter-btn" onclick="filterTasks('completed', this)">المكتملة ✔️</button>
+                <button class="filter-btn" onclick="filterTasks('failed', this)">غير المنجزة ❌</button>
             </div>
             <button class="btn-clear-done" onclick="clearCompleted()">🗑️ مسح المكتمل</button>
         </div>
@@ -487,9 +537,31 @@
         let calDate = new Date();
         let scheduleData = JSON.parse(localStorage.getItem('my_clean_tasks_db')) || emptySchedule;
 
+        // التوافق مع البيانات القديمة
+        Object.keys(scheduleData).forEach(day => {
+            scheduleData[day] = scheduleData[day].map(t => {
+                if (t.completed !== undefined) {
+                    t.status = t.completed ? 'completed' : 'pending';
+                    delete t.completed;
+                }
+                if (!t.status) t.status = 'pending';
+                if (!t.recurrence) t.recurrence = 'permanent';
+                return t;
+            });
+        });
+
         function saveSchedule() {
             localStorage.setItem('my_clean_tasks_db', JSON.stringify(scheduleData));
             renderTasks();
+        }
+
+        function toggleDateRange(val) {
+            const box = document.getElementById('dateRangeBox');
+            if (val === 'period') {
+                box.classList.add('active');
+            } else {
+                box.classList.remove('active');
+            }
         }
 
         function selectDay(day, btn) {
@@ -503,15 +575,22 @@
             const text = document.getElementById('taskInput').value.trim();
             if (!text) return;
 
+            const recurrence = document.getElementById('recurrenceType').value;
+            const startDate = document.getElementById('startDateInput').value;
+            const endDate = document.getElementById('endDateInput').value;
+
             const newTask = {
                 id: Date.now(),
                 text: text,
                 category: document.getElementById('categorySelect').value,
                 priority: document.getElementById('prioritySelect').value,
+                recurrence: recurrence,
+                startDate: recurrence === 'period' ? startDate : '',
+                endDate: recurrence === 'period' ? endDate : '',
                 startTime: document.getElementById('startTimeInput').value,
                 endTime: document.getElementById('endTimeInput').value,
                 room: document.getElementById('roomInput').value.trim(),
-                completed: false
+                status: 'pending' // pending, completed, failed
             };
 
             if (!scheduleData[currentDay]) scheduleData[currentDay] = [];
@@ -527,9 +606,11 @@
             saveSchedule();
         }
 
-        function toggleTask(id) {
+        function setTaskStatus(id, newStatus) {
             scheduleData[currentDay] = scheduleData[currentDay].map(t => {
-                if (t.id === id) return { ...t, completed: !t.completed };
+                if (t.id === id) {
+                    return { ...t, status: t.status === newStatus ? 'pending' : newStatus };
+                }
                 return t;
             });
             saveSchedule();
@@ -537,7 +618,7 @@
 
         function clearCompleted() {
             if (confirm('هل تريد حذف جميع المهام المكتملة لليوم المحدد؟')) {
-                scheduleData[currentDay] = (scheduleData[currentDay] || []).filter(t => !t.completed);
+                scheduleData[currentDay] = (scheduleData[currentDay] || []).filter(t => t.status !== 'completed');
                 saveSchedule();
             }
         }
@@ -553,7 +634,7 @@
             switch(category) {
                 case 'lectures': return '<span class="badge badge-lectures">محاضرات</span>';
                 case 'study': return '<span class="badge badge-study">مذاكرة</span>';
-                case 'language': return '<span class="badge badge-language">لغة</span>';
+                case 'language': return '<span class="badge badge-language">ألماني/لغة</span>';
                 default: return '<span class="badge badge-general">عام</span>';
             }
         }
@@ -573,35 +654,56 @@
 
             const dayTasks = scheduleData[currentDay] || [];
 
-            const total = dayTasks.length;
-            const completedCount = dayTasks.filter(t => t.completed).length;
+            // تصفية حسب التاريخ إذا كانت المهمة محددة بفترة
+            const todayStr = new Date().toISOString().split('T')[0];
+            const activeDayTasks = dayTasks.filter(t => {
+                if (t.recurrence === 'period') {
+                    if (t.startDate && todayStr < t.startDate) return false;
+                    if (t.endDate && todayStr > t.endDate) return false;
+                }
+                return true;
+            });
+
+            // حساب الإحصائيات
+            const total = activeDayTasks.length;
+            const completedCount = activeDayTasks.filter(t => t.status === 'completed').length;
             const percent = total === 0 ? 0 : Math.round((completedCount / total) * 100);
 
             document.getElementById('progressBar').style.width = `${percent}%`;
             document.getElementById('progressText').innerText = `${percent}% (${completedCount}/${total})`;
 
-            let filtered = dayTasks.filter(t => {
-                if (currentFilter === 'pending') return !t.completed;
-                if (currentFilter === 'completed') return t.completed;
+            // التصفية
+            let filtered = activeDayTasks.filter(t => {
+                if (currentFilter === 'pending') return t.status === 'pending';
+                if (currentFilter === 'completed') return t.status === 'completed';
+                if (currentFilter === 'failed') return t.status === 'failed';
                 return true;
             });
 
             if (filtered.length === 0) {
-                taskList.innerHTML = `<div class="empty-state">🎉 لا توجد مهام مسجلة لهذا اليوم</div>`;
+                taskList.innerHTML = `<div class="empty-state">🎉 لا توجد مهام مسجلة لهذا اليوم في هذا الفلتر</div>`;
             } else {
                 filtered.forEach(task => {
                     const li = document.createElement('li');
-                    li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                    li.className = `task-item status-${task.status}`;
                     const detailsStr = task.room ? `⏰ ${task.startTime} - ${task.endTime} | 📍 ${task.room}` : `⏰ ${task.startTime} - ${task.endTime}`;
                     
+                    const periodBadge = task.recurrence === 'period' ? '<span class="badge badge-period">📅 فترة محددة</span>' : '';
+                    const failedBadge = task.status === 'failed' ? '<span class="badge badge-failed">❌ لم تنجز</span>' : '';
+
                     li.innerHTML = `
                         <div class="task-content">
-                            <input type="checkbox" class="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})">
+                            <div class="status-actions">
+                                <button class="btn-status check ${task.status === 'completed' ? 'active' : ''}" onclick="setTaskStatus(${task.id}, 'completed')" title="إنجاز">✔️</button>
+                                <button class="btn-status fail ${task.status === 'failed' ? 'active' : ''}" onclick="setTaskStatus(${task.id}, 'failed')" title="عدم إنجاز/فشل">❌</button>
+                            </div>
                             <div class="task-info">
                                 <span class="task-text">${task.text}</span>
                                 <span class="task-details">${detailsStr}</span>
                             </div>
                             <div class="badge-group">
+                                ${failedBadge}
+                                ${periodBadge}
                                 ${getPriorityBadge(task.priority)}
                                 ${getCategoryBadge(task.category)}
                             </div>
@@ -613,7 +715,7 @@
             }
         }
 
-        /* ووظائف التقويم Modal */
+        /* وظائف التقويم Modal */
         function openCalendar() {
             document.getElementById('calendarModal').classList.add('active');
             renderCalendar();
