@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدولي اليومي والمهام</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --danger-color: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 15px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            margin-top: 10px;
+        }
+
+        header { text-align: center; margin-bottom: 20px; }
+        header h1 { font-size: 1.6rem; margin-bottom: 5px; }
+        header p { color: var(--text-muted); font-size: 0.9rem; }
+
+        .add-task-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: #0f172a50;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .input-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 180px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #0f172a;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: #0f172a;
+            color: var(--text-main);
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .btn-add {
+            padding: 10px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-add:hover { background-color: var(--accent-hover); }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            gap: 10px;
+        }
+
+        .filters { display: flex; gap: 5px; }
+
+        .filter-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .filter-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .task-stats { font-size: 0.8rem; color: var(--text-muted); }
+
+        .task-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #0f172a80;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .task-item.completed { opacity: 0.5; }
+        .task-item.completed .task-text { text-decoration: line-through; }
+
+        .task-content { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .checkbox { width: 18px; height: 18px; accent-color: var(--accent-color); cursor: pointer; }
+        .task-text { font-size: 0.9rem; word-break: break-word; }
+
+        .badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; }
+        .badge-lectures { background: #3b82f620; color: #60a5fa; border: 1px solid #3b82f640; }
+        .badge-study { background: #8b5cf620; color: #c084fc; border: 1px solid #8b5cf640; }
+        .badge-german { background: #f59e0b20; color: #fbbf24; border: 1px solid #f59e0b40; }
+        .badge-general { background: #64748b20; color: #cbd5e1; border: 1px solid #64748b40; }
+
+        .btn-delete { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; }
+        .btn-delete:hover { color: var(--danger-color); }
+
+        .empty-state { text-align: center; padding: 25px; color: var(--text-muted); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>📌 جدول المهام اليومي</h1>
+            <p>متابعة وتنظيم المهام والمذاكرة</p>
+        </header>
+
+        <div class="add-task-form">
+            <div class="input-group">
+                <input type="text" id="taskInput" placeholder="اكتب المهمة هنا..." />
+                <select id="categorySelect">
+                    <option value="lectures">🏛️ محاضرات</option>
+                    <option value="study">💻 مذاكرة</option>
+                    <option value="german">🇩🇪 ألماني</option>
+                    <option value="general">📝 عام</option>
+                </select>
+            </div>
+            <button class="btn-add" onclick="addTask()">➕ إضافة المهمة</button>
+        </div>
+
+        <div class="controls">
+            <div class="filters">
+                <button class="filter-btn active" onclick="filterTasks('all', this)">الكل</button>
+                <button class="filter-btn" onclick="filterTasks('pending', this)">المتبقية</button>
+                <button class="filter-btn" onclick="filterTasks('completed', this)">المكتملة</button>
+            </div>
+            <div class="task-stats" id="taskStats">0 متبقية</div>
+        </div>
+
+        <ul class="task-list" id="taskList"></ul>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('my_personal_tasks')) || [];
+        let currentFilter = 'all';
+
+        function saveTasks() {
+            localStorage.setItem('my_personal_tasks', JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            const categorySelect = document.getElementById('categorySelect');
+            const text = input.value.trim();
+
+            if (text === '') return;
+
+            tasks.push({
+                id: Date.now(),
+                text: text,
+                category: categorySelect.value,
+                completed: false
+            });
+
+            input.value = '';
+            saveTasks();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveTasks();
+        }
+
+        function toggleTask(id) {
+            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+            saveTasks();
+        }
+
+        function filterTasks(filter, btn) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderTasks();
+        }
+
+        function getCategoryBadge(category) {
+            switch(category) {
+                case 'lectures': return '<span class="badge badge-lectures">محاضرات</span>';
+                case 'study': return '<span class="badge badge-study">مذاكرة</span>';
+                case 'german': return '<span class="badge badge-german">ألماني</span>';
+                default: return '<span class="badge badge-general">عام</span>';
+            }
+        }
+
+        function renderTasks() {
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = '';
+
+            let filtered = tasks.filter(t => {
+                if (currentFilter === 'pending') return !t.completed;
+                if (currentFilter === 'completed') return t.completed;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                taskList.innerHTML = '<div class="empty-state">🎉 لا توجد مهام حالياً</div>';
+            } else {
+                filtered.forEach(task => {
+                    const li = document.createElement('li');
+                    li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                    li.innerHTML = `
+                        <div class="task-content">
+                            <input type="checkbox" class="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})">
+                            <span class="task-text">${task.text}</span>
+                            ${getCategoryBadge(task.category)}
+                        </div>
+                        <button class="btn-delete" onclick="deleteTask(${task.id})" title="حذف">🗑️</button>
+                    `;
+                    taskList.appendChild(li);
+                });
+            }
+
+            const pending = tasks.filter(t => !t.completed).length;
+            document.getElementById('taskStats').innerText = `${pending} متبقية`;
+        }
+
+        document.getElementById('taskInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTask();
+        });
+
+        renderTasks();
+    </script>
+</body>
+</html>
